@@ -11,10 +11,9 @@ class TestElectrodeSOH(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
 
-        x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
-        x100_sim = pybamm.Simulation(x100_model, parameter_values=parameter_values)
-        C_model = pybamm.lithium_ion.ElectrodeSOHC()
-        C_sim = pybamm.Simulation(C_model, parameter_values=parameter_values)
+        x100_sim, x0_sim = pybamm.lithium_ion.create_electrode_soh_sims(
+            parameter_values
+        )
 
         Vmin = 3
         Vmax = 4.2
@@ -24,9 +23,7 @@ class TestElectrodeSOH(unittest.TestCase):
 
         inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
         # Solve the model and check outputs
-        sol = pybamm.lithium_ion.solve_electrode_soh(
-            x100_sim, C_sim, inputs, parameter_values
-        )
+        sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, x0_sim, inputs)
 
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
@@ -64,18 +61,14 @@ class TestSetInitialSOC(unittest.TestCase):
         C_p = parameter_values.evaluate(param.p.cap_init)
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
-        x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
-        C_model = pybamm.lithium_ion.ElectrodeSOHC()
-
-        x100_sim = pybamm.Simulation(x100_model, parameter_values=parameter_values)
-        C_sim = pybamm.Simulation(C_model, parameter_values=parameter_values)
+        x100_sim, x0_sim = pybamm.lithium_ion.create_electrode_soh_sims(
+            parameter_values
+        )
 
         inputs = {"V_min": V_min, "V_max": V_max, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
 
         # Solve the model and check outputs
-        esoh_sol = pybamm.lithium_ion.solve_electrode_soh(
-            x100_sim, C_sim, inputs, parameter_values
-        )
+        esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, x0_sim, inputs)
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(1, parameter_values)
         self.assertAlmostEqual(x, esoh_sol["x_100"].data[0])
@@ -89,6 +82,20 @@ class TestSetInitialSOC(unittest.TestCase):
             ValueError, "Initial SOC should be between 0 and 1"
         ):
             pybamm.lithium_ion.get_initial_stoichiometries(2, None)
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        param = pybamm.LithiumIonParameters()
+
+        C_n = parameter_values.evaluate(param.n.cap_init)
+        C_p = parameter_values.evaluate(param.p.cap_init)
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+
+        inputs = {"V_min": 0, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
+            pybamm.lithium_ion.check_esoh_feasible(parameter_values, inputs)
+        inputs = {"V_min": 3, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
+            pybamm.lithium_ion.check_esoh_feasible(parameter_values, inputs)
 
 
 if __name__ == "__main__":

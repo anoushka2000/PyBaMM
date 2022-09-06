@@ -122,15 +122,15 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
-        pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-            None, "Negative", "quadratic profile", None
+        pybamm.particle.XAveragedPolynomialProfile(
+            None, "Negative", {"particle": "quadratic profile"}
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
-        pybamm.particle.no_distribution.PolynomialProfile(
-            None, "Negative", "quadratic profile", None
+        pybamm.particle.PolynomialProfile(
+            None, "Negative", {"particle": "quadratic profile"}
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
@@ -181,7 +181,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Mohtat2019", citations._papers_to_cite)
-        pybamm.lithium_ion.ElectrodeSOHC()
+        pybamm.lithium_ion.ElectrodeSOHx0()
         self.assertIn("Mohtat2019", citations._papers_to_cite)
 
     def test_mohtat_2021(self):
